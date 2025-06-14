@@ -1,4 +1,4 @@
-ComfyUI Clipboard Workflow Automator
+# ComfyUI Clipboard Workflow Automator
 Script that monitors your clipboard and automatically runs a predefined, ComfyUI workflow whenever a new image is copied.
 
 (It's highly recommended to create a short GIF showcasing the script in action and replace the link above)
