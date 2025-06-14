@@ -39,7 +39,7 @@ Follow these steps carefully to get the automator running.
 
 **1. Clone the Repository**
 ```bash
-git clone https://github.com/your-username/your-repo-name.git
+git clone https://github.com/kastelan/ComfyUI-Clipboard-Workflow-Automator.git
 cd your-repo-name
 ```
 
