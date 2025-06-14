@@ -1,6 +1,6 @@
 # ComfyUI Clipboard Workflow Automator
 
-[](https://www.pythonround script that monitors your clipboard and automatically runs a predefined, complex ComfyUI workflow whenever a new image is copied. This tool is designed for power users and developers looking to automate repetitive tasks like face-swapping, upscaling, or applying a consistent style with zero clicks.
+Script that monitors your clipboard and automatically runs a predefined, ComfyUI workflow whenever a new image is copied. This tool is designed for power users and developers looking to automate repetitive tasks like face-swapping, upscaling, or applying a consistent style with zero clicks.
 
 
 *(It's highly recommended to create a short GIF showcasing the script in action and replace the link above)*
