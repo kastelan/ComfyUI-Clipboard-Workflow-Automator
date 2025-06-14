@@ -3,6 +3,7 @@ Script that monitors your clipboard and automatically runs a predefined, ComfyUI
 
 (It's highly recommended to create a short GIF showcasing the script in action and replace the link above)
 
+
 Key Features
 Background Monitoring: Runs silently in the background, waiting for new images.
 
