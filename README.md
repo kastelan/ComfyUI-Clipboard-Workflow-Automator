@@ -3,8 +3,6 @@
 Script that monitors your clipboard and automatically runs a predefined, ComfyUI workflow whenever a new image is copied. This tool is designed for power users and developers looking to automate repetitive tasks like face-swapping, upscaling, or applying a consistent style with zero clicks.
 
 
-*(It's highly recommended to create a short GIF showcasing the script in action and replace the link above)*
-
 ---
 
 ## Key Features
@@ -110,26 +108,6 @@ Pillow
 pywin32
 ```
 
-### `.gitignore`
-```
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-
-# Logs
-*.log
-
-# IDE / OS specific
-.idea/
-.vscode/
-*.DS_Store
-```
-
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
@@ -138,15 +116,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 *This project was born out of a real-world need to automate complex image processing tasks in ComfyUI. It has been through extensive debugging and is designed to be as robust as possible.*
 
-[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/47784027/d57dbe80-d231-4d49-8003-325d380ca6bc/clipboard_processor.json
-[2] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/47784027/8152a963-5cb1-45bd-8ab2-2d0150dafbf9/clipboard.py
-[3] https://github.com/comfyanonymous/ComfyUI/discussions/1218
-[4] https://docsbot.ai/prompts/writing/python-code-readme
-[5] https://github.com/dream-computing/syntax-nodes
-[6] https://docs.jarvislabs.ai/comfyui
-[7] https://www.runcomfy.com/comfyui-nodes/comfyui-various/JWImageLoadRGBA-From-Clipboard
-[8] https://www.youtube.com/watch?v=-1DCx9mSm5M
-[9] https://www.reddit.com/r/comfyui/comments/17nqsbx/copy_image_from_comfyui_to_clipboard/
-[10] https://packaging.python.org/guides/making-a-pypi-friendly-readme/
-[11] https://pypi.org/project/comfy-script/
-[12] https://www.youtube.com/watch?v=9P_FLQBz45U
