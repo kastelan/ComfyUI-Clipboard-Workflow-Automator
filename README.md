@@ -99,14 +99,6 @@ BASE_DIR = Path(r"D:\ComfyUI_windows_portable")
 -   **`NameError: 'INPUT_DIR' is not defined`**: You have accidentally deleted the configuration block at the top of the `clipboard.py` script. Restore it from this repository.
 -   **`Invalid image file`**: The path to the image is incorrect. Ensure the `INPUT_DIR` path is correctly set and that the script is generating the relative path correctly.
 
-## Files to Include in Your Repository
-
-### `requirements.txt`
-```
-requests
-Pillow
-pywin32
-```
 
 ## License
 
