@@ -8,7 +8,7 @@ Script that monitors your clipboard and automatically runs a predefined, ComfyUI
 ## Key Features
 
 -   **Background Monitoring:** Runs silently in the background, waiting for new images.
--   **Full Workflow Automation:** Instead of just pasting an image, it triggers your entire, complex workflow from start to finish.
+-   **Full Workflow Automation:** Instead of just pasting an image, it triggers your entire, workflow from start to finish.
 -   **Duplicate Detection:** Intelligently detects if the image in the clipboard is the same as the last one, preventing the same job from running repeatedly.
 -   **Universally Compatible:** Designed to work with **any** ComfyUI workflow, no matter how complex, by targeting a specifically named node.
 -   **API-Driven:** Uses the ComfyUI API, ensuring robust and reliable execution.
@@ -59,7 +59,6 @@ This is the most important part of the setup.
 -   **Step 3a: Target the Input Node**  
     In the ComfyUI interface, load the workflow you want to automate. Find the **`LoadImage`** node that should receive the image from your clipboard. Right-click on this node and select **"Title"**. Set its title to exactly **`load_clipboard_image`**.
 
-     *(Replace with an actual screenshot)*
 
 -   **Step 3b: Save the Workflow in API Format**  
     This script requires the workflow to be in the API-specific JSON format to preserve all node properties.
@@ -67,7 +66,6 @@ This is the most important part of the setup.
     2.  A new button, **"Save (API Format)"**, will appear. Click it.
     3.  Save the file as **`clipboard_processor.json`** inside this project's directory, overwriting the placeholder if it exists.
 
-     *(Replace with an actual screenshot)*
 
 **4. Configure Paths in `clipboard.py`**
 Open the `clipboard.py` script and ensure the paths at the top match your system configuration, especially `BASE_DIR`.
