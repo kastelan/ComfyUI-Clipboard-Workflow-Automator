@@ -106,25 +106,6 @@ Pillow
 pywin32
 ```
 
-### `.gitignore`
-```
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-
-# Logs
-*.log
-
-# IDE / OS specific
-.idea/
-.vscode/
-*.DS_Store
-```
 
 ## License
 
