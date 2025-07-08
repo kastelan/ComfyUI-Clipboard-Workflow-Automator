@@ -8,7 +8,6 @@ import json
 import hashlib
 
 # --- CONFIGURATION ---
-# Adjust these paths to match your ComfyUI installation directory.
 BASE_DIR = Path(r"D:\ComfyUI_windows_portable")
 COMFY_DIR = BASE_DIR / "ComfyUI"
 INPUT_DIR = COMFY_DIR / "input" / "clipboard_images"
@@ -16,7 +15,6 @@ WORKFLOW_TEMPLATE = COMFY_DIR / "user/default/workflows" / "clipboard_processor.
 COMFY_API = "http://127.0.0.1:8188/prompt"
 
 # --- LOGGING SETUP ---
-# Configures logging to both a file and the console for easy debugging.
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -26,117 +24,151 @@ logging.basicConfig(
     ]
 )
 
-# --- GLOBAL VARIABLE FOR DUPLICATE CHECKING ---
-# This will store the hash of the last successfully processed image to avoid re-running the same job.
+# --- GLOBAL VARIABLES FOR DUPLICATE CHECKING ---
 last_image_hash = None
+last_text_content = None
 
 def get_image_hash(image: Image.Image) -> str:
-    """Calculates an MD5 hash of an image to create a unique fingerprint."""
+    """Calculates an MD5 hash of an image."""
     return hashlib.md5(image.tobytes()).hexdigest()
 
-def get_clipboard_image(retries=3, delay=0.5) -> Image.Image | None:
-    """
-    Safely retrieves an image from the system clipboard.
-    Retries a few times in case the clipboard is busy.
-    """
-    for attempt in range(retries):
+def get_clipboard_image() -> Image.Image | None:
+    """Safely retrieves an image from the system clipboard."""
+    try:
+        win32clipboard.OpenClipboard()
+        if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_DIB):
+            image = ImageGrab.grabclipboard()
+            if isinstance(image, Image.Image):
+                return image
+    except Exception:
+        pass # Ignore errors if clipboard is busy or format is not DIB
+    finally:
         try:
-            win32clipboard.OpenClipboard()
-            if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_DIB):
-                image = ImageGrab.grabclipboard()
-                if isinstance(image, Image.Image):
-                    return image
-        except Exception as e:
-            logging.warning(f"Attempt {attempt+1} to read clipboard failed: {e}")
-        finally:
-            try:
-                win32clipboard.CloseClipboard()
-            except Exception:
-                pass
-        time.sleep(delay)
+            win32clipboard.CloseClipboard()
+        except Exception:
+            pass
     return None
 
-def create_api_prompt(image_path: Path) -> dict:
+def get_clipboard_text() -> str | None:
+    """Safely retrieves text from the system clipboard."""
+    try:
+        win32clipboard.OpenClipboard()
+        if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+            text = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT)
+            return text
+    except Exception:
+        pass
+    finally:
+        try:
+            win32clipboard.CloseClipboard()
+        except Exception:
+            pass
+    return None
+
+def create_api_prompt(content, content_type: str) -> dict:
     """
-    Loads the entire API-formatted workflow and performs a targeted modification.
-    This is the most robust method for complex workflows as it preserves all hidden properties.
+    Loads the API-formatted workflow and performs a targeted modification
+    based on the content type (image or text).
     """
     with open(WORKFLOW_TEMPLATE, "r", encoding="utf-8") as f:
         prompt = json.load(f)
 
-    # 1. Find the ID of the node we want to modify.
-    #    We identify it by its special title set in the ComfyUI interface.
-    target_node_id = None
+    node_found = False
+    if content_type == 'image':
+        image_path = content
+        target_title = 'load_clipboard_image'
+        target_input = 'image'
+        # We must provide a relative path from the `ComfyUI/input/` directory.
+        new_value = f"{INPUT_DIR.name}/{image_path.name}".replace("\\", "/")
+    elif content_type == 'text':
+        target_title = 'load_clipboard_text'
+        target_input = 'text' # Standard input name for CLIPTextEncode etc.
+        new_value = content
+    else:
+        return None # Should not happen
+
+    # Find the target node by its title and modify it.
     for node_id, node_data in prompt.items():
-        # The node title is stored in the "_meta" key in the API format.
-        if isinstance(node_data, dict) and node_data.get("_meta", {}).get("title") == "load_clipboard_image":
-            target_node_id = node_id
+        if isinstance(node_data, dict) and node_data.get("_meta", {}).get("title") == target_title:
+            prompt[node_id]["inputs"][target_input] = new_value
+            logging.info(f"Found and updated node '{target_title}' (ID: {node_id}) with new {content_type}.")
+            node_found = True
             break
             
-    # 2. If the target node was found, modify its "image" input.
-    if target_node_id:
-        if prompt[target_node_id]["class_type"] == "LoadImage":
-            # We must provide a relative path from the `ComfyUI/input/` directory.
-            relative_path = f"{INPUT_DIR.name}/{image_path.name}"
-            prompt[target_node_id]["inputs"]["image"] = relative_path.replace("\\", "/")
-            logging.info(f"Found and updated node '{prompt[target_node_id]['_meta']['title']}' (ID: {target_node_id}) with the new image.")
-        else:
-            logging.warning(f"Node with title 'load_clipboard_image' was found but it is not a LoadImage node!")
-    else:
-        logging.warning("No node with the title 'load_clipboard_image' found. The clipboard image will not be used.")
+    if not node_found:
+        logging.warning(f"No node with the title '{target_title}' found. The {content_type} from clipboard will not be used.")
 
-    # Return the entire prompt object, now with the modified input.
     return {"prompt": prompt, "client_id": "clipboard_script"}
 
-def process_image():
+def process_clipboard():
     """
-    The main processing function. It checks for a new image and, if found,
-    saves it and sends it to the ComfyUI API.
+    Main processing function. Checks for an image first, then for text,
+    and triggers the workflow if new content is found.
     """
-    global last_image_hash # We need to modify the global variable.
+    global last_image_hash, last_text_content
 
+    # --- 1. Check for an image first ---
     image = get_clipboard_image()
-    if not image:
-        # If the clipboard is empty, reset the hash so the next image can be processed.
-        if last_image_hash is not None:
-            logging.info("Clipboard is empty, resetting last image hash.")
-            last_image_hash = None
+    if image:
+        current_hash = get_image_hash(image)
+        if current_hash == last_image_hash:
+            return # Same image, do nothing
+
+        logging.info(f"New image detected (hash: {current_hash[:8]}...). Processing.")
+        last_image_hash = current_hash
+        last_text_content = None # Reset text tracker
+
+        INPUT_DIR.mkdir(parents=True, exist_ok=True)
+        image_path = INPUT_DIR / f"clipboard_{int(time.time())}.png"
+        image.save(image_path)
+        logging.info(f"Image saved to: {image_path}")
+        
+        # Prepare and send the prompt for the image
+        workflow_prompt = create_api_prompt(image_path, 'image')
+        send_to_api(workflow_prompt)
         return
 
-    # Calculate the hash of the image currently in the clipboard.
-    current_hash = get_image_hash(image)
+    # --- 2. If no image, check for text ---
+    text = get_clipboard_text()
+    if text and text.strip(): # Ensure text is not empty or just whitespace
+        if text == last_text_content:
+            return # Same text, do nothing
 
-    # If the hash is the same as the last one, do nothing.
-    if current_hash == last_image_hash:
-        return # It's the same image, so we exit the function.
+        logging.info(f"New text detected: '{text[:50]}...'. Processing.")
+        last_text_content = text
+        last_image_hash = None # Reset image tracker
+        
+        # Prepare and send the prompt for the text
+        workflow_prompt = create_api_prompt(text, 'text')
+        send_to_api(workflow_prompt)
+        return
 
-    # It's a new image! Let's process it.
-    logging.info(f"New image detected in clipboard (hash: {current_hash[:8]}...). Processing.")
-    last_image_hash = current_hash # Update the hash to this new one.
+    # --- 3. If clipboard is empty or unsupported, reset trackers ---
+    if last_image_hash is not None or last_text_content is not None:
+        logging.info("Clipboard is empty or contains unsupported data. Resetting trackers.")
+        last_image_hash = None
+        last_text_content = None
 
-    # Save the image to the designated input directory.
-    INPUT_DIR.mkdir(parents=True, exist_ok=True)
-    image_path = INPUT_DIR / f"clipboard_{int(time.time())}.png"
-    image.save(image_path)
-    logging.info(f"Image saved to: {image_path}")
-
-    # Send the job to the ComfyUI API.
+def send_to_api(workflow_prompt: dict):
+    """Sends the prepared workflow prompt to the ComfyUI API."""
+    if not workflow_prompt:
+        logging.error("Workflow prompt is empty, cannot send to API.")
+        return
     try:
-        workflow_prompt = create_api_prompt(image_path)
         logging.debug(f"Sending API prompt: {json.dumps(workflow_prompt, indent=2)}")
         response = requests.post(COMFY_API, json=workflow_prompt)
-        response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx).
+        response.raise_for_status()
         logging.info(f"ComfyUI API response: {response.json()}")
     except Exception as e:
         logging.error(f"Error while processing workflow: {e}")
 
 def main():
     """The main entry point of the script."""
-    logging.info("Clipboard monitor started. Waiting for a new image...")
+    logging.info("Clipboard monitor started. Waiting for new image or text...")
     try:
         while True:
-            process_image()
-            time.sleep(1) # Check the clipboard every second.
+            process_clipboard()
+            time.sleep(1)
     except KeyboardInterrupt:
         logging.info("Clipboard monitor stopped by user.")
 
