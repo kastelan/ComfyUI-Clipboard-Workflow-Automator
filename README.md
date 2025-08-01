@@ -113,5 +113,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 *This project was born out of a real-world need to automate complex image and text processing tasks in ComfyUI. It has been through extensive debugging and is designed to be as robust as possible.*
 
-[1] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/47784027/d57dbe80-d231-4d49-8003-325d380ca6bc/clipboard_processor.json
-[2] https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/attachments/47784027/8152a963-5cb1-45bd-8ab2-2d0150dafbf9/clipboard.py
+
