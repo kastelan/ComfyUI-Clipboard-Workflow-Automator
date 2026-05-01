@@ -2,38 +2,61 @@
 
 ## Overview
 
-A powerful background script that monitors your clipboard and automatically runs a predefined, complex ComfyUI workflow whenever a new image or text is copied. This tool is designed for power users and developers looking to automate repetitive tasks like face-swapping, upscaling, or applying consistent styles and prompts with zero clicks.
+A cross-platform background script that monitors your clipboard and automatically runs a predefined ComfyUI workflow whenever a new image or text is copied. Designed for power users looking to automate repetitive tasks like face-swapping, upscaling, or applying consistent styles with zero clicks.
+
+Supports **Windows** (via `win32clipboard` + `PIL.ImageGrab`) and **Linux** (via GTK/GDK).
 
 ## Key Features
 
-- **Background Monitoring:** Runs silently in the background, waiting for new images or text.
-- **Full Workflow Automation:** Triggers your entire, complex workflow from start to finish, not just pasting content.
-- **Duplicate Detection:** Intelligently detects if the content in the clipboard is the same as the last processed, preventing redundant jobs.
-- **Dual Input Support:** Handles both images (via a `LoadImage` node) and text (via a text input node like `CLIPTextEncode`).
-- **Universally Compatible:** Works with **any** ComfyUI workflow, no matter how complex, by targeting specifically named nodes.
-- **API-Driven:** Uses the ComfyUI API for robust and reliable execution.
+- **Cross-platform:** Single script runs on both Windows and Linux — platform detected automatically at startup.
+- **Background Monitoring:** Runs silently, waiting for new clipboard content.
+- **Full Workflow Automation:** Triggers your entire ComfyUI workflow from start to finish.
+- **Duplicate Detection:** Skips content that was already processed (MD5 hash for images, direct comparison for text).
+- **Startup Skip:** Content already in the clipboard when the script launches is ignored — only genuinely new changes trigger a workflow.
+- **Dual Input Support:** Handles both images (via a `LoadImage` node) and text (via any text input node).
+- **Startup Validation:** Checks that `COMFY_DIR` and the workflow JSON exist before entering the monitor loop, with clear error messages if not.
+- **API-Driven:** Uses the ComfyUI HTTP API for robust execution.
 
 ## How It Works
 
-1. The script continuously monitors the system clipboard for new image or text data.
-2. To avoid re-processing, it calculates a unique identifier (hash for images, direct comparison for text) and compares it to the previously processed content.
-3. If new content is detected, the script loads a `clipboard_processor.json` file, which must be saved in the **API format**.
-4. It then finds the appropriate node within the workflow:
-   - For images: a `LoadImage` node with the title **`load_clipboard_image`**.
-   - For text: a node with the title **`load_clipboard_text`** (e.g., `CLIPTextEncode`).
-5. It updates the node's input (`image` for images, `text` for text) with the new content from the clipboard.
-6. Finally, it sends the complete, modified workflow to the ComfyUI API for execution.
+1. At launch, the script reads the current clipboard state and stores it without processing — this prevents the leftover clipboard content from triggering a workflow immediately.
+2. It then continuously polls the clipboard every second for new content.
+3. If new content is detected, the script loads `clipboard_processor.json` (saved in **API format**) and patches the appropriate node:
+   - For images: a `LoadImage` node titled **`load_clipboard_image`** — the image is saved to `ComfyUI/input/clipboard_images/` first.
+   - For text: any node titled **`load_clipboard_text`** (e.g. `CLIPTextEncode`).
+4. The modified workflow is sent to the ComfyUI API for execution.
+5. A `clipboard.log` file is written next to `clipboard.py` for easy access regardless of ComfyUI's installation path.
 
 ## Requirements
 
-- Python 3.8 or higher.
+- Python 3.10 or higher (uses `X | Y` type union syntax).
 - A running instance of ComfyUI.
-- All custom nodes required by your workflow must be correctly installed in ComfyUI.
-- Python libraries: `requests`, `Pillow`, and `pywin32`.
+- All custom nodes required by your workflow installed in ComfyUI.
+
+### Platform-specific dependencies
+
+| Package | Windows | Linux |
+|---|---|---|
+| `Pillow` | ✅ | ✅ |
+| `requests` | ✅ | ✅ |
+| `pywin32` | ✅ | ❌ |
+| `PyGObject` | ❌ | ✅ |
+
+Install with:
+```bash
+# Windows
+pip install -r requirements_win.txt
+
+# Linux
+pip install -r requirements_linux.txt
+```
+
+> **Linux note:** `PyGObject` requires system GTK libraries. On Ubuntu/Debian:
+> ```bash
+> sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-3.0
+> ```
 
 ## Installation & Setup
-
-Follow these steps carefully to get the automator running.
 
 ### 1. Clone the Repository
 ```bash
@@ -42,75 +65,93 @@ cd ComfyUI-Clipboard-Workflow-Automator
 ```
 
 ### 2. Install Python Dependencies
-It's recommended to use a virtual environment.
 ```bash
-# Create a virtual environment (optional but recommended)
 python -m venv venv
-source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+source venv/bin/activate        # Windows: venv\Scripts\activate
 
-# Install required packages
-pip install -r requirements.txt
+# Windows
+pip install -r requirements_win.txt
+
+# Linux
+pip install -r requirements_linux.txt
 ```
 
-### 3. Prepare Your ComfyUI Workflow (Crucial Steps!)
+### 3. Configure Paths in `clipboard.py`
 
-This is the most important part of the setup.
-
-- **Step 3a: Target the Input Nodes**
-  - In the ComfyUI interface, load the workflow you want to automate.
-  - For image input: Find the **`LoadImage`** node that should receive the image from your clipboard. Right-click on this node, select **"Title"**, and set its title to exactly **`load_clipboard_image`**.
-  - For text input: Find the node that should receive text (e.g., `CLIPTextEncode` for prompts). Right-click, select **"Title"**, and set its title to exactly **`load_clipboard_text`**.
-
-- **Step 3b: Save the Workflow in API Format**
-  - This script requires the workflow to be in the API-specific JSON format to preserve all node properties.
-  - In ComfyUI's settings (the gear icon ⚙️), check the box for **"Enable Dev mode Options"**.
-  - A new button, **"Save (API Format)"**, will appear. Click it.
-  - Save the file as **`clipboard_processor.json`** inside this project's directory, overwriting the placeholder if it exists.
-
-### 4. Configure Paths in `clipboard.py`
-Open the `clipboard.py` script and ensure the paths at the top match your system configuration, especially `BASE_DIR`.
+Open `clipboard.py` and set `COMFY_DIR` to match your installation:
 
 ```python
-# --- CONFIGURATION ---
-BASE_DIR = Path(r"D:\ComfyUI_windows_portable")
-# ... other paths are derived from this
+if sys.platform == "win32":
+    COMFY_DIR = Path(r"D:\ComfyUI_windows_portable") / "ComfyUI"
+    COMFY_API = "http://127.0.0.1:8188/prompt"
+else:
+    COMFY_DIR = Path.home() / "ComfyUI"   # e.g. /home/yourname/ComfyUI
+    COMFY_API = "http://127.0.0.1:3001/prompt"
 ```
+
+### 4. Prepare Your ComfyUI Workflow
+
+**Step 4a — Title the input nodes**
+
+In ComfyUI, right-click the node that should receive clipboard content and select **"Title"**:
+- Image input node → set title to exactly **`load_clipboard_image`**
+- Text input node → set title to exactly **`load_clipboard_text`**
+
+**Step 4b — Save in API format**
+
+- Open ComfyUI Settings (⚙️) and enable **"Dev mode Options"**.
+- Click **"Save (API Format)"** and save the file as:
+  ```
+  ComfyUI/user/default/workflows/clipboard_processor.json
+  ```
 
 ## Usage
 
-1. Make sure your ComfyUI server is running.
-2. Open a terminal, navigate to the project directory, and run the script:
+1. Make sure ComfyUI is running.
+2. Run the script:
    ```bash
    python clipboard.py
    ```
-3. The script will print a message that it's monitoring the clipboard.
-4. Now, simply copy any image or text to your clipboard (e.g., from a web browser, screenshot tool, or text editor).
-5. The script will detect the new content, save images if applicable, and trigger your ComfyUI workflow. You will see log messages in the terminal, and the job will appear in your ComfyUI queue.
+3. You should see:
+   ```
+   INFO - Startup: existing clipboard text ignored ('...').
+   INFO - Clipboard monitor started (Linux). Press Ctrl+C to stop.
+   ```
+4. Copy any image or text — the workflow fires automatically.
+5. Logs appear in the terminal and in `clipboard.log` next to the script.
 
 ## Troubleshooting
 
-- **`Cannot execute because node ... does not exist`**: This error is misleading. It usually means you are **missing one or more custom nodes** required by your workflow. Use the **ComfyUI Manager** -> **"Install Missing Custom Nodes"** feature to scan your workflow and install all dependencies.
-- **Script runs but nothing happens**:
-  - Check if you correctly set the node titles to `load_clipboard_image` or `load_clipboard_text`.
-  - Ensure you saved the workflow using **"Save (API Format)"**.
-  - Make sure you are copying **new** content. The script ignores duplicates.
-- **`NameError: 'INPUT_DIR' is not defined`**: You have accidentally deleted the configuration block at the top of the `clipboard.py` script. Restore it from this repository.
-- **`Invalid image file`**: The path to the image is incorrect. Ensure the `INPUT_DIR` path is correctly set and that the script is generating the relative path correctly.
+**`ComfyUI directory not found`**
+→ `COMFY_DIR` in `clipboard.py` does not point to a valid directory. Double-check the path.
 
-## Files to Include in Your Repository
+**`Workflow template not found`**
+→ The `clipboard_processor.json` file is missing. Save your workflow via **Save (API Format)** as described in Step 4b.
 
-### `requirements.txt`
+**`Cannot execute because node ... does not exist`**
+→ Your workflow uses a custom node that is not installed. Use **ComfyUI Manager → Install Missing Custom Nodes**.
+
+**Script runs but nothing happens**
+→ Check that node titles are set exactly to `load_clipboard_image` / `load_clipboard_text`.
+→ Confirm the workflow was saved using **Save (API Format)**, not the regular Save.
+→ Make sure you are copying **new** content — duplicates are intentionally skipped.
+
+**Linux: clipboard image not detected**
+→ GTK clipboard only holds images copied from GUI applications. Screenshots from tools like `gnome-screenshot` or `flameshot` work; raw file copies in a file manager typically don't.
+
+## File Structure
+
 ```
-requests
-Pillow
-pywin32
+ComfyUI-Clipboard-Workflow-Automator/
+├── clipboard.py           # Main script (cross-platform)
+├── requirements_win.txt   # Windows dependencies
+├── requirements_linux.txt # Linux dependencies
+├── LICENSE
+└── README.md
 ```
 
+> `clipboard.log` is created at runtime next to `clipboard.py` — add it to `.gitignore`.
 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-*This project was born out of a real-world need to automate complex image and text processing tasks in ComfyUI. It has been through extensive debugging and is designed to be as robust as possible.*
-
-
