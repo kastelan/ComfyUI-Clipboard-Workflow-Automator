@@ -136,7 +136,7 @@ if sys.platform == "win32":
     COMFY_DIR = Path(r"X:\ComfyUI_windows_portable") / "ComfyUI"
     COMFY_API = "http://127.0.0.1:3001/prompt"
 else:
-    COMFY_DIR = Path.home() / "ComfyUI"   # e.g. /home/nk/ComfyUI
+    COMFY_DIR = Path.home() / "ComfyUI"   # e.g. /home/ComfyUI
     COMFY_API = "http://127.0.0.1:3001/prompt"
 
 INPUT_DIR = COMFY_DIR / "input" / "clipboard_images"
