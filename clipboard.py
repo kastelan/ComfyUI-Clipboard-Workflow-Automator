@@ -6,6 +6,7 @@ Polls the system clipboard every second and forwards new image or text content
 to a running ComfyUI instance via its HTTP API.
 """
 
+import argparse
 import hashlib
 import json
 import logging
@@ -136,11 +137,12 @@ if sys.platform == "win32":
     COMFY_DIR = Path(r"X:\ComfyUI_windows_portable") / "ComfyUI"
     COMFY_API = "http://127.0.0.1:3001/prompt"
 else:
-    COMFY_DIR = Path.home() / "ComfyUI"   # e.g. /home/yourname/ComfyUI
+    COMFY_DIR = Path.home() / "ComfyUI"   # e.g. /home/nk/ComfyUI
     COMFY_API = "http://127.0.0.1:3001/prompt"
 
 INPUT_DIR = COMFY_DIR / "input" / "clipboard_images"
-WORKFLOW_TEMPLATE = COMFY_DIR / "user" / "default" / "workflows" / "clipboard_processor.json"
+WORKFLOWS_DIR = COMFY_DIR / "user" / "default" / "workflows" / "clipboard"
+WORKFLOW_TEMPLATE = WORKFLOWS_DIR / "default.json"  # overridden by --profile
 
 # ---------------------------------------------------------------------------
 # Logging — file next to ComfyUI root + stdout
@@ -172,16 +174,18 @@ def get_image_hash(image: Image.Image) -> str:
     return hashlib.md5(image.tobytes()).hexdigest()
 
 
-def create_api_prompt(content, content_type: str) -> dict | None:
+def create_api_prompt(content, content_type: str, workflow_path: Path | None = None) -> dict | None:
     """
     Loads the ComfyUI API-format workflow JSON and patches the node that
     matches the target title ('load_clipboard_image' or 'load_clipboard_text').
 
     For images, content should be a Path to the saved file.
     For text, content should be the raw string.
+    workflow_path overrides the global WORKFLOW_TEMPLATE (used for --profile).
     Returns the patched prompt dict, or None for unknown content types.
     """
-    with open(WORKFLOW_TEMPLATE, "r", encoding="utf-8") as f:
+    path = workflow_path or WORKFLOW_TEMPLATE
+    with open(path, "r", encoding="utf-8") as f:
         prompt = json.load(f)
 
     if content_type == "image":
@@ -197,9 +201,15 @@ def create_api_prompt(content, content_type: str) -> dict | None:
         logging.error(f"Unknown content_type '{content_type}' — cannot build API prompt.")
         return None
 
+    # Only patch the target node — resetting the opposite node (e.g. clearing the
+    # image node when text arrives) is not safe because LoadImage requires a valid
+    # file path and crashes on an empty string. Handle input switching inside the
+    # workflow itself using a bypass or primitive switch node.
     node_found = False
     for node_id, node_data in prompt.items():
-        if isinstance(node_data, dict) and node_data.get("_meta", {}).get("title") == target_title:
+        if not isinstance(node_data, dict):
+            continue
+        if node_data.get("_meta", {}).get("title") == target_title:
             prompt[node_id]["inputs"][target_input] = new_value
             logging.info(f"Updated node '{target_title}' (ID: {node_id}) with new {content_type}.")
             node_found = True
@@ -280,19 +290,68 @@ def process_clipboard() -> None:
         last_text_content = None
 
 
+def parse_args() -> argparse.Namespace:
+    """Parses command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="ComfyUI Clipboard Workflow Automator",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+    parser.add_argument(
+        "--profile",
+        metavar="NAME",
+        default=None,
+        help=(
+            "Workflow profile to use.\n"
+            "Loads <NAME>.json from the ComfyUI workflows directory.\n"
+            "Defaults to 'clipboard_processor' if not specified."
+        ),
+    )
+    parser.add_argument(
+        "--list-profiles",
+        action="store_true",
+        help="List all available workflow profiles and exit.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
-    """Entry point: starts the polling loop."""
+    """Entry point: parses args, validates paths, starts the polling loop."""
+    global WORKFLOW_TEMPLATE, last_image_hash, last_text_content
+
+    args = parse_args()
     platform_label = "Windows" if sys.platform == "win32" else "Linux"
 
-    # Validate required paths before entering the loop — fail fast with clear messages
+    # Validate ComfyUI directory first — needed for both --list-profiles and normal run
     if not COMFY_DIR.exists():
         logging.error(f"ComfyUI directory not found: {COMFY_DIR}")
         logging.error("Update COMFY_DIR in the configuration section and try again.")
         sys.exit(1)
+
+    # --list-profiles: show available .json files and exit
+    if args.list_profiles:
+        profiles = sorted(WORKFLOWS_DIR.glob("*.json"))
+        if not profiles:
+            logging.info(f"No workflow profiles found in: {WORKFLOWS_DIR}")
+        else:
+            logging.info(f"Available profiles in {WORKFLOWS_DIR}:")
+            for p in profiles:
+                marker = " ← default" if p.name == "default.json" else ""
+                logging.info(f"  --profile {p.stem}{marker}")
+        sys.exit(0)
+
+    # Resolve workflow path from --profile or use default
+    if args.profile:
+        WORKFLOW_TEMPLATE = WORKFLOWS_DIR / f"{args.profile}.json"
+        logging.info(f"Using profile: {args.profile} ({WORKFLOW_TEMPLATE.name})")
+    # else: WORKFLOW_TEMPLATE stays as the global default
+
     if not WORKFLOW_TEMPLATE.exists():
         logging.error(f"Workflow template not found: {WORKFLOW_TEMPLATE}")
-        logging.error("Open ComfyUI, build your workflow, then save it via: Save > Save (API format)")
-        logging.error(f"Expected path: {WORKFLOW_TEMPLATE}")
+        if args.profile:
+            logging.error(f"Run with --list-profiles to see available profiles.")
+        else:
+            logging.error(f"Expected folder: {WORKFLOWS_DIR}")
+            logging.error("Save your workflow via ComfyUI: Save > Save (API format) → save as 'default.json' in that folder.")
         sys.exit(1)
 
     # Pre-load current clipboard state so the first poll does not trigger a workflow.
@@ -307,7 +366,7 @@ def main() -> None:
             last_text_content = _init_text
             logging.info(f"Startup: existing clipboard text ignored ('{_init_text[:40]}...').")
 
-    logging.info(f"Clipboard monitor started ({platform_label}). Press Ctrl+C to stop.")
+    logging.info(f"Clipboard monitor started ({platform_label}) — profile: {WORKFLOW_TEMPLATE.stem}. Press Ctrl+C to stop.")
     try:
         while True:
             process_clipboard()

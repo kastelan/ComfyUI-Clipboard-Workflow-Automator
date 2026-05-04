@@ -21,7 +21,7 @@ Supports **Windows** (via `win32clipboard` + `PIL.ImageGrab`) and **Linux** (via
 
 1. At launch, the script reads the current clipboard state and stores it without processing — this prevents the leftover clipboard content from triggering a workflow immediately.
 2. It then continuously polls the clipboard every second for new content.
-3. If new content is detected, the script loads `clipboard_processor.json` (saved in **API format**) and patches the appropriate node:
+3. If new content is detected, the script loads a workflow JSON from the `clipboard/` subfolder (saved in **API format**) and patches the appropriate node:
    - For images: a `LoadImage` node titled **`load_clipboard_image`** — the image is saved to `ComfyUI/input/clipboard_images/` first.
    - For text: any node titled **`load_clipboard_text`** (e.g. `CLIPTextEncode`).
 4. The modified workflow is sent to the ComfyUI API for execution.
@@ -102,7 +102,7 @@ In ComfyUI, right-click the node that should receive clipboard content and selec
 - Open ComfyUI Settings (⚙️) and enable **"Dev mode Options"**.
 - Click **"Save (API Format)"** and save the file as:
   ```
-  ComfyUI/user/default/workflows/clipboard_processor.json
+  ComfyUI/user/default/workflows/clipboard/default.json
   ```
 
 ## Usage
@@ -110,7 +110,14 @@ In ComfyUI, right-click the node that should receive clipboard content and selec
 1. Make sure ComfyUI is running.
 2. Run the script:
    ```bash
+   # Default profile (clipboard/default.json)
    python clipboard.py
+
+   # Specific profile (clipboard/upscale.json)
+   python clipboard.py --profile upscale
+
+   # List all available profiles
+   python clipboard.py --list-profiles
    ```
 3. You should see:
    ```
@@ -126,7 +133,7 @@ In ComfyUI, right-click the node that should receive clipboard content and selec
 → `COMFY_DIR` in `clipboard.py` does not point to a valid directory. Double-check the path.
 
 **`Workflow template not found`**
-→ The `clipboard_processor.json` file is missing. Save your workflow via **Save (API Format)** as described in Step 4b.
+→ The `default.json` profile is missing. Save your workflow via **Save (API Format)** into `ComfyUI/user/default/workflows/clipboard/default.json`.
 
 **`Cannot execute because node ... does not exist`**
 → Your workflow uses a custom node that is not installed. Use **ComfyUI Manager → Install Missing Custom Nodes**.
@@ -148,6 +155,11 @@ ComfyUI-Clipboard-Workflow-Automator/
 ├── requirements_linux.txt # Linux dependencies
 ├── LICENSE
 └── README.md
+
+ComfyUI/user/default/workflows/clipboard/
+├── default.json           # Default profile (required)
+├── upscale.json           # Example additional profile
+└── faceswap.json          # Example additional profile
 ```
 
 > `clipboard.log` is created at runtime next to `clipboard.py` — add it to `.gitignore`.
