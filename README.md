@@ -153,12 +153,15 @@ In ComfyUI, right-click the node that should receive clipboard content and selec
 
 **`Workflow template not found`**
 → The `default.json` profile is missing. Save your workflow via **Save (API Format)** into `ComfyUI/user/default/workflows/clipboard/default.json`.
+<<<<<<< HEAD
 
 **`Workflow template ... is empty or not valid JSON`**
 → `default.json` (or your `--profile` file) is empty or truncated — usually from an interrupted save. Re-save it via **Save (API Format)** in ComfyUI. The script logs this and skips the current clipboard item instead of crashing.
 
 **`Node '...' has no valid 'inputs' block` / `has no '...' input`**
 → The workflow JSON was saved without the expected node structure, or the titled node isn't the type you expect (e.g. `load_clipboard_text` was put on a node with no `text` input). Re-check the node title and type in ComfyUI, then re-save in API format.
+=======
+>>>>>>> 124e5c2bd237e19d6f7c3f5fb61fbeebfdc0cf33
 
 **`Cannot execute because node ... does not exist`**
 → Your workflow uses a custom node that is not installed. Use **ComfyUI Manager → Install Missing Custom Nodes**.
