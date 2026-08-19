@@ -142,26 +142,7 @@ else:  # Linux (and other GTK-capable platforms)
             return None
 
 # ---------------------------------------------------------------------------
-<<<<<<< HEAD
 # Logging — file next to clipboard.py + stdout
-=======
-# Configuration — platform-appropriate defaults
-# ---------------------------------------------------------------------------
-
-if sys.platform == "win32":
-    COMFY_DIR = Path(r"X:\ComfyUI_windows_portable") / "ComfyUI"
-    COMFY_API = "http://127.0.0.1:3001/prompt"
-else:
-    COMFY_DIR = Path.home() / "ComfyUI"   # e.g. /home/nk/ComfyUI
-    COMFY_API = "http://127.0.0.1:3001/prompt"
-
-INPUT_DIR = COMFY_DIR / "input" / "clipboard_images"
-WORKFLOWS_DIR = COMFY_DIR / "user" / "default" / "workflows" / "clipboard"
-WORKFLOW_TEMPLATE = WORKFLOWS_DIR / "default.json"  # overridden by --profile
-
-# ---------------------------------------------------------------------------
-# Logging — file next to ComfyUI root + stdout
->>>>>>> 124e5c2bd237e19d6f7c3f5fb61fbeebfdc0cf33
 # ---------------------------------------------------------------------------
 
 logging.basicConfig(
@@ -289,7 +270,6 @@ def create_api_prompt(content, content_type: str, workflow_path: Path | None = N
     Returns the patched prompt dict, or None for unknown content types.
     """
     path = workflow_path or WORKFLOW_TEMPLATE
-<<<<<<< HEAD
     try:
         with open(path, "r", encoding="utf-8") as f:
             prompt = json.load(f)
@@ -306,10 +286,6 @@ def create_api_prompt(content, content_type: str, workflow_path: Path | None = N
             f"Re-export the workflow from ComfyUI in API format."
         )
         return None
-=======
-    with open(path, "r", encoding="utf-8") as f:
-        prompt = json.load(f)
->>>>>>> 124e5c2bd237e19d6f7c3f5fb61fbeebfdc0cf33
 
     if content_type == "image":
         target_title = "load_clipboard_image"
@@ -332,7 +308,6 @@ def create_api_prompt(content, content_type: str, workflow_path: Path | None = N
     for node_id, node_data in prompt.items():
         if not isinstance(node_data, dict):
             continue
-<<<<<<< HEAD
         if node_data.get("_meta", {}).get("title") != target_title:
             continue
 
@@ -359,13 +334,6 @@ def create_api_prompt(content, content_type: str, workflow_path: Path | None = N
         inputs[target_input] = new_value
         logging.info(f"Updated node '{target_title}' (ID: {node_id}) with new {content_type}.")
         break
-=======
-        if node_data.get("_meta", {}).get("title") == target_title:
-            prompt[node_id]["inputs"][target_input] = new_value
-            logging.info(f"Updated node '{target_title}' (ID: {node_id}) with new {content_type}.")
-            node_found = True
-            break
->>>>>>> 124e5c2bd237e19d6f7c3f5fb61fbeebfdc0cf33
 
     if not node_found:
         logging.warning(
@@ -618,14 +586,11 @@ def main() -> None:
             logging.info(f"Startup: existing clipboard text ignored ('{_init_text[:40]}...').")
 
     logging.info(f"Clipboard monitor started ({platform_label}) — profile: {WORKFLOW_TEMPLATE.stem}. Press Ctrl+C to stop.")
-<<<<<<< HEAD
 
     replay_dead_letter_queue()
     cleanup_old_images(INPUT_DIR, CONFIG["retention_max_age_days"], CONFIG["retention_max_files"])
     next_cleanup_time = time.time() + CONFIG["retention_check_interval_seconds"]
 
-=======
->>>>>>> 124e5c2bd237e19d6f7c3f5fb61fbeebfdc0cf33
     try:
         while True:
             process_clipboard()
