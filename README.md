@@ -160,8 +160,6 @@ In ComfyUI, right-click the node that should receive clipboard content and selec
 
 Node '...' has no valid 'inputs' block` / `has no '...' input`**
 → The workflow JSON was saved without the expected node structure, or the titled node isn't the type you expect (e.g. `load_clipboard_text` was put on a node with no `text` input). Re-check the node title and type in ComfyUI, then re-save in API format.
-=======
->>>>>>> 124e5c2bd237e19d6f7c3f5fb61fbeebfdc0cf33
 
 **`Cannot execute because node ... does not exist`**
 → Your workflow uses a custom node that is not installed. Use **ComfyUI Manager → Install Missing Custom Nodes**.
