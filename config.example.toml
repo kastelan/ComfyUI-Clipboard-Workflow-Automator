@@ -1,0 +1,25 @@
+# Copy this file to config.toml (same folder as clipboard.py) and edit as needed.
+# Any section/key you omit falls back to the script's built-in default, so you
+# only need to include the values you actually want to change.
+
+[comfyui]
+# Root of your ComfyUI install. On Windows use double backslashes or forward slashes.
+dir = "/home/nk/ComfyUI"
+# ComfyUI's HTTP API endpoint (the /prompt route).
+api_url = "http://127.0.0.1:3001/prompt"
+
+[retry]
+# How many times to retry a failed send before giving up and queuing it
+# in failed_prompts/ for retry on next startup.
+count = 3
+# Base delay in seconds before the first retry; doubles each subsequent attempt
+# (e.g. 2s, 4s, 8s with the default count of 3).
+backoff_seconds = 2
+
+[retention]
+# Delete clipboard_images/*.png older than this many days. 0 disables this check.
+max_age_days = 7
+# Keep at most this many of the newest images regardless of age. 0 disables this check.
+max_files = 500
+# How often (in seconds) the running script re-checks retention while polling.
+check_interval_seconds = 3600

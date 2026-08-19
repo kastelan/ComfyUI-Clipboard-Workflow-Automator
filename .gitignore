@@ -2,3 +2,5 @@ venv/
 clipboard.log
 __pycache__/
 *.pyc
+config.toml
+failed_prompts/
