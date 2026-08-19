@@ -158,7 +158,7 @@ In ComfyUI, right-click the node that should receive clipboard content and selec
 **`Workflow template ... is empty or not valid JSON`**
 → `default.json` (or your `--profile` file) is empty or truncated — usually from an interrupted save. Re-save it via **Save (API Format)** in ComfyUI. The script logs this and skips the current clipboard item instead of crashing.
 
-Node '...' has no valid 'inputs' block` / `has no '...' input`**
+**`Node '...' has no valid 'inputs' block` / `has no '...' input`**
 → The workflow JSON was saved without the expected node structure, or the titled node isn't the type you expect (e.g. `load_clipboard_text` was put on a node with no `text` input). Re-check the node title and type in ComfyUI, then re-save in API format.
 
 **`Cannot execute because node ... does not exist`**
