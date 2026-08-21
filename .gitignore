@@ -4,3 +4,14 @@ __pycache__/
 *.pyc
 config.toml
 failed_prompts/
+
+# Test / lint tooling caches (from Phase 3: pytest, ruff, mypy)
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
