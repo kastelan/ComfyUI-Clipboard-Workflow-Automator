@@ -1,0 +1,20 @@
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "LOG", "BLE"]
+ignore = [
+    # LOG015: "use your own logger, not the root logger". This is a single-file
+    # script, not a library — there's no risk of clobbering another module's
+    # logging config, and a named logger would add ceremony with no benefit here.
+    "LOG015",
+    # BLE001: "don't catch bare Exception". The five occurrences in clipboard.py
+    # are all deliberate last-resort catches around OS clipboard APIs and file
+    # I/O, each paired with logging so failures are never silent. Narrowing
+    # them further would mean enumerating every win32/GTK-specific exception
+    # type, which isn't worth the fragility it would add.
+    "BLE001",
+]
+
+[tool.mypy]
+ignore_missing_imports = true

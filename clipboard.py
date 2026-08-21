@@ -18,7 +18,8 @@ from pathlib import Path
 try:
     import tomllib  # Python 3.11+ stdlib
 except ModuleNotFoundError:
-    tomllib = None  # config.toml support disabled; hardcoded defaults still work
+    tomllib = None  # type: ignore[assignment]
+    # config.toml support disabled on Python <3.11; hardcoded defaults still work.
 
 import requests
 from PIL import Image
@@ -80,7 +81,7 @@ else:  # Linux (and other GTK-capable platforms)
     import gi
     gi.require_version('Gtk', '3.0')
     gi.require_version('Gdk', '3.0')
-    from gi.repository import Gtk, Gdk
+    from gi.repository import Gdk, Gtk
     # GTK must be initialised before any clipboard or widget operations.
     Gtk.init([])
 
@@ -567,10 +568,13 @@ def main() -> None:
     if not WORKFLOW_TEMPLATE.exists():
         logging.error(f"Workflow template not found: {WORKFLOW_TEMPLATE}")
         if args.profile:
-            logging.error(f"Run with --list-profiles to see available profiles.")
+            logging.error("Run with --list-profiles to see available profiles.")
         else:
             logging.error(f"Expected folder: {WORKFLOWS_DIR}")
-            logging.error("Save your workflow via ComfyUI: Save > Save (API format) → save as 'default.json' in that folder.")
+            logging.error(
+                "Save your workflow via ComfyUI: Save > Save (API format) "
+                "→ save as 'default.json' in that folder."
+            )
         sys.exit(1)
 
     # Pre-load current clipboard state so the first poll does not trigger a workflow.
@@ -585,7 +589,10 @@ def main() -> None:
             last_text_content = _init_text
             logging.info(f"Startup: existing clipboard text ignored ('{_init_text[:40]}...').")
 
-    logging.info(f"Clipboard monitor started ({platform_label}) — profile: {WORKFLOW_TEMPLATE.stem}. Press Ctrl+C to stop.")
+    logging.info(
+        f"Clipboard monitor started ({platform_label}) — profile: {WORKFLOW_TEMPLATE.stem}. "
+        f"Press Ctrl+C to stop."
+    )
 
     replay_dead_letter_queue()
     cleanup_old_images(INPUT_DIR, CONFIG["retention_max_age_days"], CONFIG["retention_max_files"])

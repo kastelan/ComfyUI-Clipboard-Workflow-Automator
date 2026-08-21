@@ -16,25 +16,32 @@ jobs:
         # PyGObject is installed via apt (python3-gi) to avoid compiling from source.
         # pip install PyGObject requires libgirepository-2.0-dev and cairo headers
         # which vary across Ubuntu versions — apt is simpler and more reliable in CI.
-        run: sudo apt-get install -y python3-gi python3-gi-cairo gir1.2-gtk-3.0
+        run: sudo apt-get install -y python3-gi python3-gi-cairo gir1.2-gtk-3.0 xvfb
 
       - name: Install Python dependencies (excluding PyGObject)
-        run: pip install Pillow requests
+        run: pip install Pillow requests -r requirements-dev.txt
 
       - name: Test imports (Linux branch)
         # python3-gi is a system package only visible to /usr/bin/python3.
         # We expose it to the hostedtoolcache Python via PYTHONPATH.
+        #
+        # clipboard.py calls Gtk.init([]) at import time, which calls exit(1)
+        # (not a catchable Python exception) if it can't open a display — and
+        # GitHub's runners are headless. xvfb-run gives it a virtual display so
+        # the import actually exercises the real startup path instead of a
+        # lighter-weight substitute that would miss this class of bug.
         env:
           PYTHONPATH: /usr/lib/python3/dist-packages
         run: |
-          python3 -c "
-          import gi
-          gi.require_version('Gtk', '3.0')
-          gi.require_version('Gdk', '3.0')
-          from gi.repository import Gtk, Gdk
-          import PIL, requests, hashlib, json, sys, time, pathlib
+          xvfb-run -a python3 -c "
+          import clipboard
           print('Linux branch imports OK')
           "
+
+      - name: Run tests (Linux branch)
+        env:
+          PYTHONPATH: /usr/lib/python3/dist-packages
+        run: xvfb-run -a python3 -m pytest tests/ -v
 
   test-windows:
     runs-on: windows-latest
@@ -46,7 +53,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install Python dependencies
-        run: pip install -r requirements_win.txt
+        run: pip install -r requirements_win.txt -r requirements-dev.txt
 
       - name: Test imports (Windows branch)
         run: |
@@ -54,3 +61,26 @@ jobs:
           import clipboard
           print('Windows branch imports OK')
           "
+
+      - name: Run tests (Windows branch)
+        run: python -m pytest tests/ -v
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install lint dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Ruff
+        run: ruff check clipboard.py tests/
+
+      - name: Mypy
+        # Static analysis only — doesn't import the module, so no GTK/Xvfb needed
+        # even though clipboard.py itself requires a display to actually run.
+        run: mypy clipboard.py
